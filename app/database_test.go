@@ -1,0 +1,53 @@
+package database
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	_ "github.com/jackc/pgx/v4/stdlib"
+)
+
+func Test(t *testing.T) {
+	t.Parallel()
+
+	type user struct {
+		ID       int64  `db:"user_id"`
+		UserName string `db:"username"`
+	}
+
+	testCases := []struct {
+		name               string
+		db                 *DevDatabase
+		user               user
+		errorAssertionFunc assert.ErrorAssertionFunc
+	}{
+		{
+			name:               "create user: positive",
+			db:                 NewTestDatabase(),
+			user:               user{1, "alice"},
+			errorAssertionFunc: assert.NoError,
+		},
+		{
+			name:               "create user: false negative",
+			db:                 NewTestDatabase(),
+			user:               user{1, "bob"},
+			errorAssertionFunc: assert.Error,
+		},
+	}
+
+	query := `INSERT INTO "users" ("id", "username") VALUES ($1, $2)`
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			defer tc.db.Close(t)
+
+			_, err := tc.db.Exec(query, tc.user.ID, tc.user.UserName)
+			tc.errorAssertionFunc(t, err)
+			t.Logf("database: %s", tc.db)
+		})
+	}
+}

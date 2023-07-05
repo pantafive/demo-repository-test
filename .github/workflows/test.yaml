@@ -1,0 +1,31 @@
+name: test
+
+env:
+  POSTGRES_USER: admin
+  POSTGRES_PASSWORD: admin
+  DATABASE_TEMPLATE: dev_template
+  POSTGRES_HOST: localhost
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup Database
+      run: COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose build postgres && docker-compose up --no-build --no-deps -d postgres
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.20'
+        cache-dependency-path: go.sum
+
+    - name: Test
+      run: go test -v ./...
+      working-directory: app

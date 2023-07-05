@@ -1,0 +1,21 @@
+services:
+  builder:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      target: builder
+    environment:
+      POSTGRES_HOST: postgres
+    depends_on: [postgres]
+
+  postgres:
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${DATABASE_TEMPLATE:-dev_template}
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      target: postgres
+    tmpfs: [/var/lib/postgresql/data]
+    ports: [5432:5432]

@@ -6,27 +6,29 @@ import (
 	"strings"
 
 	"github.com/joho/godotenv"
-	"github.com/rs/zerolog/log"
 )
 
+// MustNotEmptyString panics if the string is empty.
 func MustNotEmptyString(s string) string {
 	if s == "" {
-		log.Panic().Msg("string must not be empty")
+		panic("string must not be empty")
 	}
 	return s
 }
 
+// MustLoadEnv try to load .env file from a path.
+// If file does not exist, it will do nothing.
 func MustLoadEnv(path ...string) {
 	if err := godotenv.Load(path...); err != nil {
 		if strings.Contains(err.Error(), "no such file or directory") {
-			log.Warn().Err(err).Msg("no .env file found")
 			return
 		}
 
-		log.Fatal().Err(err).Msg("Failed to load .env file")
+		panic("Failed to load .env file")
 	}
 }
 
+// SearchUpwardForFile searches for a file in the current directory and all parent directories.
 func SearchUpwardForFile(fileName string) string {
 	dir, err := os.Getwd()
 	if err != nil {

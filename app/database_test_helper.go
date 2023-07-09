@@ -9,7 +9,6 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/oklog/ulid/v2"
-	"github.com/rs/zerolog/log"
 )
 
 type DevDatabase struct {
@@ -67,7 +66,7 @@ func (db *DevDatabase) Close(t Testing) {
 	t.Helper()
 	defer db.databaseWithSudo.Close()
 	if err := db.DB.Close(); err != nil {
-		log.Panic().Err(err).Msg("Failed to close dev Database")
+		panic(fmt.Errorf("failed to close dev Database: %w", err))
 	}
 
 	if !t.Failed() {
@@ -79,7 +78,7 @@ func randomDatabaseNameGenerator() string {
 	entropy := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	uid, err := ulid.New(ulid.Timestamp(time.Now()), entropy)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to generate ulid")
+		panic(fmt.Errorf("failed to generate ulid: %w", err))
 	}
 	return "test_" + strings.ToLower(uid.String())
 }

@@ -2,13 +2,11 @@ package database
 
 import (
 	"fmt"
-	"math/rand"
 	"os"
+	"regexp"
 	"strings"
-	"time"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/oklog/ulid/v2"
 )
 
 type DevDatabase struct {
@@ -23,7 +21,9 @@ func (db *DevDatabase) String() string {
 	return db.databaseName
 }
 
-func NewTestDatabase() *DevDatabase {
+func NewTestDatabase(databaseName string) *DevDatabase {
+	databaseName = sanitizeDatabaseName(databaseName)
+
 	envFile := SearchUpwardForFile("dev.env")
 	if envFile == "" {
 		panic("Failed to find .env file")
@@ -33,17 +33,25 @@ func NewTestDatabase() *DevDatabase {
 	templateName := MustNotEmptyString(os.Getenv("DATABASE_TEMPLATE"))
 
 	superUserDatabase := sqlx.MustConnect("pgx", postgresDSN("postgres"))
-	name := randomDatabaseNameGenerator()
 
-	superUserDatabase.MustExec("CREATE DATABASE " + name + " TEMPLATE " + templateName)
+	superUserDatabase.MustExec("DROP DATABASE IF EXISTS " + databaseName)
+	superUserDatabase.MustExec("CREATE DATABASE " + databaseName + " TEMPLATE " + templateName)
 
-	connectionString := postgresDSN(name)
+	connectionString := postgresDSN(databaseName)
 
 	return &DevDatabase{
-		databaseName:     name,
+		databaseName:     databaseName,
 		databaseWithSudo: superUserDatabase,
 		DB:               sqlx.MustConnect("pgx", connectionString),
 	}
+}
+
+func sanitizeDatabaseName(databaseName string) string {
+	databaseName = strings.TrimSpace(databaseName)
+	databaseName = strings.ToLower(databaseName)
+	databaseName = regexp.MustCompile(`[^a-zA-Z0-9_-]`).ReplaceAllString(databaseName, "_")
+	databaseName = regexp.MustCompile(`_+`).ReplaceAllString(databaseName, "_")
+	return databaseName
 }
 
 func postgresDSN(databaseName string) string {
@@ -72,13 +80,4 @@ func (db *DevDatabase) Close(t Testing) {
 	if !t.Failed() {
 		db.databaseWithSudo.MustExec("DROP DATABASE " + db.databaseName)
 	}
-}
-
-func randomDatabaseNameGenerator() string {
-	entropy := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
-	uid, err := ulid.New(ulid.Timestamp(time.Now()), entropy)
-	if err != nil {
-		panic(fmt.Errorf("failed to generate ulid: %w", err))
-	}
-	return "test_" + strings.ToLower(uid.String())
 }

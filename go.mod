@@ -6,7 +6,6 @@ require (
 	github.com/jackc/pgx/v4 v4.18.0
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/joho/godotenv v1.5.1
-	github.com/oklog/ulid/v2 v2.1.0
 	github.com/stretchr/testify v1.8.2
 )
 
